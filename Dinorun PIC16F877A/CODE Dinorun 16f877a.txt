@@ -1,0 +1,373 @@
+
+//////Use 8Mhz crystal
+
+int i;
+int pos;
+int dp;
+int cuen;
+int pas;
+int ale;
+int pun;
+int cntr;
+int st;
+int rnd;
+int aux;
+char sc[7];
+char *text, *text1;
+ANSEL;
+ANSELH;
+
+                           ///Asigna pines del LCD
+sbit LCD_RS at RB2_bit;
+sbit LCD_EN at RB3_bit;
+sbit LCD_D4 at RB4_bit;
+sbit LCD_D5 at RB5_bit;
+sbit LCD_D6 at RB6_bit;
+sbit LCD_D7 at RB7_bit;
+
+sbit LCD_RS_Direction at TRISB2_bit;
+sbit LCD_EN_Direction at TRISB3_bit;
+sbit LCD_D4_Direction at TRISB4_bit;
+sbit LCD_D5_Direction at TRISB5_bit;
+sbit LCD_D6_Direction at TRISB6_bit;
+sbit LCD_D7_Direction at TRISB7_bit;
+
+//////////////////////////////////////////////-----sprites generados/----//////////////////////////////////////////
+
+////dinosaurio completo
+const char character1[] = {7,23,22,31,14,10,15,0};
+
+void CustomChar1(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(64);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character1[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 0);
+}
+
+
+////dinosaurio sin pata izquierda
+const char character2[] = {7,23,22,31,14,2,3,0};
+
+void CustomChar2(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(64);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character2[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 0);
+}
+
+
+////dinosaurio sin pata derecha
+const char character3[] = {7,23,22,31,14,8,12,0};
+
+void CustomChar3(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(64);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character3[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 0);
+}
+
+///cactus grande
+const char character4[] = {6,22,22,30,30,6,6,31};
+
+void CustomChar4(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(72);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character4[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 1);
+}
+
+///cactus chico
+const char character5[] = {0,0,12,13,15,12,12,31};
+
+void CustomChar5(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(80);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character5[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 2);
+}
+////// sol 1
+const char character6[] = {29,28,25,2,20,0,0,0};
+
+void CustomChar6(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(88);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character6[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 3);
+}
+
+////sol 2
+const char character7[] = {28,29,24,2,8,0,0,0};
+
+void CustomChar7(char pos_row, char pos_char) {
+  char i;
+    Lcd_Cmd(88);
+    for (i = 0; i<=7; i++) Lcd_Chr_CP(character7[i]);
+    Lcd_Cmd(_LCD_RETURN_HOME);
+    Lcd_Chr(pos_row, pos_char, 3);
+}
+void vel_juego(){
+//----------------------------------------------velocidad del juego-----------------------------------------------------------------------
+ if (pun<=10){                                     //velocidad del ciclo
+ delay_ms(200);                                  ////va aumentabndo la velocidad mientas aunmemnta la puntuacion "pun"
+ }
+ if (pun>10 && pun<20){
+ delay_ms(150);
+ }
+ if (pun>=20 && pun<30){
+ delay_ms(80);
+ }
+ if (pun>=30 && pun<50){
+ delay_ms(70);
+ }
+ if (pun>=50 && pun<100){
+ delay_ms(60);
+ }
+ if (pun<100){
+  delay_ms(50);
+ }
+}
+
+////////-------------------------------funcion de sonidos------------------------------------/////
+
+void sonido_pun(){
+ PWM1_Init(800);
+ PWM1_Start();
+ PWM1_Set_Duty(128);
+
+}
+
+void sonido_fin(){
+ PWM1_Init(500);
+ PWM1_Start();
+ PWM1_Set_Duty(64);
+}
+
+void sonido_stop(){
+ pwm1_stop();
+
+}
+
+void main() {
+//--------------------------------------condiciones de inicio---------------------------------------------------------------
+reset:   trisd=0x07;
+   Lcd_Init();
+  _Lcd_turn_on;
+   Lcd_Cmd(_LCD_CURSOR_OFF);
+  _LCD_CLEAR;
+                                               ///////////////////presentacion--------------
+  lcd_out(1,1, "posoco2000");
+  delay_ms(1000);
+  lcd_out(2,1, "presenta...");
+  delay_ms(1200);
+    lcd_cmd(_LCD_CLEAR);
+  lcd_out(1,1, "La historia de");
+  delay_ms(1000);
+  lcd_out(2,1, "un dinosaurio");
+  delay_ms(1000);
+    lcd_cmd(_LCD_CLEAR);
+  lcd_out(1,1, "que solo queria");
+  delay_ms(1000);
+  lcd_out(2,1, "Correr...");
+  delay_ms(1500);
+    lcd_cmd(_LCD_CLEAR);
+
+
+  cuen=19;                                ///inicia la cuenta de desplazamiento en 19
+  pun=0;                                   // inicia la puntuacion en 0
+  rnd=1;
+  while (portd.b2==1){                    ////comprobamos que funciona el boton
+   Lcd_out(1,1,"Presiona boton..");
+   CustomChar1(2,1);
+   lcd_out(2,2,"<{RUN!!RUN!!}");
+  }
+  while (portd.b2==0){
+   aux=aux++;                      /////la variable AUX es para determinar el numero en base al cual se generaran los aleatorios siguientes
+  }
+    lcd_cmd(_LCD_CLEAR);
+  lcd_out(1,1, "Inicio        ");             ////mensaje de inicio
+  delay_ms(800);
+  lcd_out(1,1, "              ");
+
+//---------------------------------ciclo principal------------------------------------------------------------------------------
+
+while (1){
+
+  sonido_stop();
+  lcd_out(1,5, "P=");               ////miestra la cantidad de cactus saltados
+  inttostr(pun, sc);             /////convierte la puntuacion en str
+  lcd_out(1,8, sc);              //// imprime la puntuacion
+  if (portd.B2==0){ ////posicion del dino arriba dp=1, abajo dp=2
+   if (st==0){
+       sonido_pun();      ///reproduice sonido de salto
+      }
+   dp=1;
+   st++;            /////st es un contador auxiliar del tiempo que ha estado arriba el dinosaurio
+   if (st>4){       ////si ha estado arriba por mas de tres ciclos automaticamente baja y el contador st vuelve a cero
+    dp=2;
+    st=0;
+   }
+  }
+  else{
+   dp=2;
+   st=0;
+  }
+  ///-------------------imprime--------------------------------------------------------------------------------------
+
+ switch(pas){
+        case 1: CustomChar2(dp,2); pas=0; CustomChar7(1,1); break;        ///dependiend de la variable pas es esl sprite del dinosaurio que se muestra
+        case 0: CustomChar3(dp,2); pas=1; CustomChar6(1,1); break;
+ }
+
+ ////////////////// ////////////////////////////////////////////////////////////////////////////////////
+ //////////////////------------------------un  cactus--------------------------------------------///////
+ ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ if (rnd>=0 && rnd<10){
+///------------------comienza el juego------------------------------------------------------------------------------------------
+ CustomChar4(2,cuen);              ////imprime un cactus
+
+vel_juego();                       ///llama a la funcion de la velocidad de juego
+
+//-----------------------------------------aumenta la puntuacion -----------------------------------------------------------
+
+ if (cuen==2 && dp==1){              ////si el dinosaurio coincide en posicion con el cactus pero esta arriba
+  pun=pun++;
+  sonido_pun;                        //// aumenta la puntiacion en 1
+ }
+
+//--------------------------------------------Condicion de fin de juego---------------------------------------------
+  cuen--;                           /////cuenta regresiva del desplazamiento de los cactus, va desde 19 hasta 0
+ text="Ups!!! U.U       ";           /////mensaje de colision
+ sonido_fin;
+ if (cuen==2 && dp==2){            /////si coinciden el dinosaurio y el cactus en la misma posicion el juego termina
+  sonido_fin();                       ///Reproduce sonido
+  delay_ms(500);
+  sonido_stop();
+  lcd_out(1,1,text);
+  delay_ms(1000);
+  lcd_out(2,1, "P=");                ////presenta la puntuacion obtenida por 4 segundos
+  lcd_out(2,3,sc);
+  delay_ms(4000);                ///y se resetea el pic despues de un segundo
+
+       goto reset;             ////para el 16f877a regrea al principio
+}
+
+ if (cuen==0){                   /// si la cuenta del desplazamiento llego a cero vuleve a su valor inicial 19
+  cuen=19;
+ //-----------------------------------------genera nuero aleatorio---------------------------------------------------
+
+  srand(rnd+aux);        //  establece el numero inicial del valor pseudo aleatorio
+  rnd=(rand()/1000);  // genera el numero pseudo aleatorio y lo divide entre 1000 para obtener solo dos digitos enteros
+  ////el numero anterior detemina que conjunto de cactus aparecera en el siguiente comienzo del ciclo (1, 2 o tres cactus)
+
+  }
+//------------------------------------------limpia el display---------------------------------------------------------
+  lcd_cmd(_LCD_CLEAR);
+  }///fin del primer if(imprime un solo cactus)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////----------------------------imprime dos cactus-------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ if (rnd>=10 && rnd<20){
+///------------------comienza el juego------------------------------------------------------------------------------------------
+
+ CustomChar4(2,cuen-1);                    ////imprime dos cactus
+ CustomChar5(2,cuen);
+
+
+//----------------------------------------------velocidad del juego-----------------------------------------------------------------------
+
+ vel_juego();
+//-----------------------------------------aumenta la puntuacion -----------------------------------------------------------
+
+ if (cuen==2 && dp==1){              ////si el dinosaurio coincide en posicion con el cactus pero esta arriba
+  pun=pun+2;                         //// aumenta la puntiacion en 1
+ }
+
+//--------------------------------------------Condicion de fin de juego---------------------------------------------
+ cuen--; ////////////cuenta de desplazamiento
+ text="Ups!!! U.U       ";
+ if ((cuen==1 && dp==2)||(cuen==2 && dp==2)||(cuen==3 && dp==2)){            /////si coinciden el dinosaurio y el cactus en la misma posicion el juego termina
+   sonido_fin();                       ///Reproduce sonido
+  delay_ms(500);
+  sonido_stop();
+  lcd_out(1,1,text);
+  delay_ms(1000);
+  lcd_out(2,1, "P=");
+  lcd_out(2,3,sc);
+  delay_ms(3000);             ///y se resetea el pic despues de un segundo
+  goto reset;
+  }
+
+
+ if (cuen==0){                   /// si la cuenta regresiva llego a cero vuleve a su valor inicial
+  cuen=19;
+ //-----------------------------------------genera nuero aleatorio---------------------------------------------------
+
+  srand(aux+rnd);        // set starting point for random numbers
+  rnd=(rand()/1000);  // generate and store random numbers
+
+  }
+//------------------------------------------limpia el display---------------------------------------------------------
+  lcd_cmd(_LCD_CLEAR);
+  }///fin del segundo if(imprime dos cactus)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////----------------------------imprime tres cactus-------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+ if (rnd>=20){
+///------------------comienza el juego------------------------------------------------------------------------------------------
+ CustomChar4(2,cuen-2);              ////imprime tres cactus
+ CustomChar5(2,cuen-1);
+ CustomChar4(2,cuen);
+
+vel_juego();
+//-----------------------------------------aumenta la puntuacion -----------------------------------------------------------
+
+ if (cuen==2 && dp==1){              ////si el dinosaurio coincide en posicion con el cactus pero esta arriba
+  pun=pun+3;                         //// aumenta la puntiacion en 1
+ }
+
+//--------------------------------------------Condicion de fin de juego---------------------------------------------
+  cuen--;
+ text="Ups!!! U.U       ";
+ if ((cuen==1 && dp==2)||(cuen==2 && dp==2)||(cuen==3 && dp==2)||(cuen==4 && dp==2)){            /////si coinciden el dinosaurio y el cactus en la misma posicion el juego termina
+  sonido_fin();                       ///Reproduce sonido
+  delay_ms(500);
+  sonido_stop();
+  lcd_out(1,1,text);
+   delay_ms(1000);
+  lcd_out(2,1, "P=");
+  lcd_out(2,3,sc);
+  delay_ms(3000);                 ///y se resetea el pic despues de un segundo
+goto reset;
+ }
+
+ if (cuen==0){                   /// si la cuenta regresiva llego a cero vuleve a su valor inicial
+  cuen=19;
+ //-----------------------------------------genera nuero aleatorio---------------------------------------------------
+
+  srand(rnd+aux);        // set starting point for random numbers
+  rnd=(rand()/1000);  // generate and store random numbers
+
+  }
+//------------------------------------------limpia el display---------------------------------------------------------
+  lcd_cmd(_LCD_CLEAR);
+  }///fin del tercer if(imprime tres cactus)
+
+} ///fin de while
+} /// fin de main
