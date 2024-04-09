@@ -1,0 +1,136 @@
+MPLINK 5.02, LINKER
+Linker Map File - Created Wed Apr 29 20:04:57 2020
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x00047e
+                   .cinit    romdata   0x00023f    program   0x000004
+.config_2007_BUILD/DEFAULT/PRODUCTION/S18-CER       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000240      
+                            0x002007    0x002007      
+            578 out of 8454 program addresses used, program memory utilization is 6%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+  BCD_IncrementarCentenas   0x000239    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+   BCD_IncrementarDecenas   0x000233    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+              BCD_Resta10   0x00022f    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+              BIN_BCD_Fin   0x00023c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+                 BoTt0Nn0   0x000122    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn1   0x000125    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn2   0x000128    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn3   0x00012b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn4   0x00012e    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn5   0x000131    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn6   0x000134    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn7   0x000137    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn8   0x00013a    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn9   0x00013d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnA   0x000140    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+               BoTt0NnAST   0x00014c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnB   0x000143    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnC   0x000146    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnD   0x000149    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+              BoTt0NnMICH   0x00014f    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+       COMPROBARSIOCUPADO   0x00017c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+                   D0SDIG   0x0001f3    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+                 DENEGADO   0x000047    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+            ESCRIBEPARTE2   0x00008d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+            ESCRIBEPARTE3   0x0000a2    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+            ESCRIBETITULO   0x00007a    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+         ESCRIBIRCARACTER   0x000165    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+          ESCRIBIRCOMANDO   0x000152    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+              FUERALIM1T3   0x0001ea    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+           IN1ci0t3cla4do   0x0000b9    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+               Inicio_lcd   0x00019c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+     PARAESCR1B1RREGISTRO   0x0001d5    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+                PERMITIDO   0x000056    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+                 PROGRAMA   0x00000d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+                 SinTecl4   0x00011d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                  TRESD1G   0x0001fc    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+          Tttest3aTecld0o   0x0000c3    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                    UND1G   0x0001eb    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+             _.org_0_0058   0x000058    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+             _.org_0_005B   0x00005b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+             _.org_0_020B   0x00020b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+            binario_a_bcd   0x00022c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+             milisegundos   0x00020d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                retbucle1   0x00020e    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle1a   0x00021c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                retbucle2   0x000210    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle2a   0x00021e    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                retbucle3   0x000212    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle3a   0x000220    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle4a   0x000222    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                 segundos   0x00021b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+           subp4arab0rf1l   0x000206    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                 PROGRAMA   0x00000d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+                 DENEGADO   0x000047    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+                PERMITIDO   0x000056    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+             _.org_0_0058   0x000058    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+             _.org_0_005B   0x00005b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+            ESCRIBETITULO   0x00007a    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+            ESCRIBEPARTE2   0x00008d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+            ESCRIBEPARTE3   0x0000a2    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\s18-cerradurae.asm
+           IN1ci0t3cla4do   0x0000b9    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+          Tttest3aTecld0o   0x0000c3    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 SinTecl4   0x00011d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn0   0x000122    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn1   0x000125    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn2   0x000128    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn3   0x00012b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn4   0x00012e    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn5   0x000131    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn6   0x000134    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn7   0x000137    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn8   0x00013a    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0Nn9   0x00013d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnA   0x000140    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnB   0x000143    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnC   0x000146    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+                 BoTt0NnD   0x000149    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+               BoTt0NnAST   0x00014c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+              BoTt0NnMICH   0x00014f    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\teclado4x4.asm
+          ESCRIBIRCOMANDO   0x000152    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+         ESCRIBIRCARACTER   0x000165    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+       COMPROBARSIOCUPADO   0x00017c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+               Inicio_lcd   0x00019c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+     PARAESCR1B1RREGISTRO   0x0001d5    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+              FUERALIM1T3   0x0001ea    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+                    UND1G   0x0001eb    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+                   D0SDIG   0x0001f3    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+                  TRESD1G   0x0001fc    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+           subp4arab0rf1l   0x000206    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+             _.org_0_020B   0x00020b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\lcd16x2.asm
+             milisegundos   0x00020d    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                retbucle1   0x00020e    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                retbucle2   0x000210    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                retbucle3   0x000212    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+                 segundos   0x00021b    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle1a   0x00021c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle2a   0x00021e    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle3a   0x000220    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+               retbucle4a   0x000222    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\Retardos.asm
+            binario_a_bcd   0x00022c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+              BCD_Resta10   0x00022f    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+   BCD_IncrementarDecenas   0x000233    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+  BCD_IncrementarCentenas   0x000239    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+              BIN_BCD_Fin   0x00023c    program     static C:\Users\USER\Desktop\Sesión 18\S18-cerradurae.X\conversor.asm
+
+
