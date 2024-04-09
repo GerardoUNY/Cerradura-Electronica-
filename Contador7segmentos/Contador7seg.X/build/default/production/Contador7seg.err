@@ -1,0 +1,5 @@
+Message[302] C:\USERS\GERAR\MPLABXPROJECTS\CONTADOR7SEG.X\CONTADOR7SEG.ASM 15 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\USERS\GERAR\MPLABXPROJECTS\CONTADOR7SEG.X\CONTADOR7SEG.ASM 16 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[305] C:\USERS\GERAR\MPLABXPROJECTS\CONTADOR7SEG.X\CONTADOR7SEG.ASM 73 : Using default destination of 1 (file).
+Message[305] C:\USERS\GERAR\MPLABXPROJECTS\CONTADOR7SEG.X\CONTADOR7SEG.ASM 81 : Using default destination of 1 (file).
+Message[305] C:\USERS\GERAR\MPLABXPROJECTS\CONTADOR7SEG.X\CONTADOR7SEG.ASM 89 : Using default destination of 1 (file).
