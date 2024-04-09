@@ -1,0 +1,1780 @@
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;/////////////        www.rodrigocarita.com     ///////////////////////
+                      00002 ; Vamos a crear un pequeño piano con las 7 notas. Usaremos el TMR2 como pwm
+                      00003 ; Para eso vamos a encontrar los valores optimos que nos permitirán llegar a
+                      00004 ; las frecuencias de cada nota.
+                      00005 ; DO -> 261.63 Hz --> 382 ms
+                      00006 ; RE -> 293.66 --> 3.4 ms
+                      00007 ; MI -> 329.63 --> 3 ms
+                      00008 ; FA -> 349.23 --> 2.86 ms
+                      00009 ; SOL -> 392 --> 2.55 ms
+                      00010 ; LA -> 440 --> 2.27 ms
+                      00011 ; SI -> 493.88 --> 2 ms
+                      00012 
+                      00013 ; El valor de cristal que ocupa estos rangos es 4 MHZ. Así que con los cálculos.
+                      00014 ;...............................................................................
+                      00015 ; A Pre-escala: 16
+                      00016 ; Para DO PR2 = 238 
+                      00017 ; Para RE PR2 = 211 
+                      00018 ; Para MI PR2 = 189
+                      00019 ; Para FA PR2 = 177
+                      00020 ; Para SOL PR2 = 158
+                      00021 ; Para LA PR2 = 141
+                      00022 ; Para SI PR2 = 126
+                      00023 ;/////////////////////////////////////////////////////////////////////////////
+                      00024 ; OJO estamos trabajando con un cristal de 4MHz y dutty 50%
+                      00025 
+Warning[205]: Found directive in column 1. (INCLUDE)
+                      00026 INCLUDE <P16F877A.INC>
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ;  MPASM PIC16F877A processor include
+                      00005 ; 
+                      00006 ;  (c) Copyright 1999-2014 Microchip Technology, All rights reserved
+                      00007 ;==========================================================================
+                      00008 
+                      00566         LIST
+Warning[205]: Found directive in column 1. (LIST)
+                      00027 LIST P=16F877A
+Warning[205]: Found directive in column 1. (INCLUDE)
+                      00028 INCLUDE <mimacro.INC> ;Incluimos la macro
+                      00001 ;: :::::::::::::::::::::: www.rodrigocarita.com ::::::::::::::::::::::::::::::::::::::
+                      00002 ; Macro de comandos y librerías para el Pic16f877A
+                      00003 ; archivo : mimacro.INC
+                      00004 ; Versión : 1.1
+                      00005 ; ------------------------------------------------------------------------------
+  00000005            00006 puertoa EQU PORTA
+  00000006            00007 puertob EQU PORTB
+  00000007            00008 puertoc EQU PORTC
+  00000008            00009 puertod EQU PORTD
+  00000009            00010 puertoe EQU PORTE
+                      00011 ;////////////////////////////////////////////
+                      00012 
+                      00013 encender macro pin,puerto
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00014     bsf puerto,pin
+                      00015     endm
+                      00016 apagar macro pin,puerto
+                      00017     bcf puerto,pin
+                      00018     endm
+                      00019         
+                      00020 ;//////////////////////////////////
+                      00021 
+                      00022 banco macro payasito
+                      00023 ;banco 0
+                      00024 if payasito==0
+                      00025 BCF STATUS, RP0
+                      00026 BCF STATUS, RP1
+                      00027 endif
+                      00028 
+                      00029 if payasito==1
+                      00030 ;banco 1
+                      00031 BSF STATUS, RP0
+                      00032 BCF STATUS, RP1
+                      00033 endif
+                      00034 
+                      00035 if payasito==2
+                      00036 ;banco 2
+                      00037 BCF STATUS, RP0
+                      00038 BSF STATUS, RP1
+                      00039 endif
+                      00040 
+                      00041 if payasito==3
+                      00042 ;banco 3
+                      00043 BSF STATUS, RP0
+                      00044 BSF STATUS, RP1
+                      00045 endif
+                      00046 
+Warning[205]: Found directive in column 1. (endm)
+                      00047 endm
+                      00048 
+                      00049 ;//////////////////////////////////////////// compara entre registros y salta si son iguales /////////
+                      00050 csir             macro  registro1,registro2,direcc
+                      00051                          movf   registro2,0
+                      00052                          subwf  registro1,0
+                      00053                          btfsc  STATUS,Z
+                      00054                          goto   direcc
+Warning[205]: Found directive in column 1. (endm)
+                      00055 endm
+                      00056 ; Compara registro con un valor y se va a la rutina direccion si son iguales
+                      00057 
+                      00058 csi          macro      registro1,valor,direccion
+                      00059                          movlw  valor
+                      00060                  subwf  registro1,0
+                      00061                  btfsc  STATUS,Z
+                      00062                  goto   direccion
+Warning[205]: Found directive in column 1. (endm)
+                      00063 endm
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00064 
+                      00065 enviaradisplay macro numnum
+                      00066         MOVLW numnum
+                      00067         CALL TABLAANODO
+                      00068         MOVWF PORTD
+Warning[205]: Found directive in column 1. (endm)
+                      00069 endm
+                      00070         
+                      00071 enviarcdisplay macro numnum
+                      00072         MOVLW numnum
+                      00073         CALL TABLACATODO
+                      00074         MOVWF PORTD
+Warning[205]: Found directive in column 1. (endm)
+                      00075 endm
+                      00076 
+                      00077 on_lib_retardos_ms macro
+                      00078         CALL CONFTMR0TEMP
+Warning[205]: Found directive in column 1. (endm)
+                      00079 endm
+                      00080 
+                      00081 retardo_ms macro valor
+                      00082         MOVLW valor
+                      00083         CALL RETARDOLIBRE_mS
+Warning[205]: Found directive in column 1. (endm)
+                      00084 endm
+                      00085 
+                      00086 ;Conversor de Binario a BCD. La respuesta se guarda en registros bcd_unidad, bcd_decena, bcd_centena
+                      00087 convertir_a_bcd macro registro
+                      00088         MOVF registro,0
+                      00089         CALL binario_a_bcd
+Warning[205]: Found directive in column 1. (endm)
+                      00090 endm
+                      00091 
+                      00092 ;Codigo de macro para Retardos
+                      00093 milisegundo      macro X
+                      00094                          movlw X
+                      00095                          call  milisegundos
+                      00096                          endm
+                      00097 segundo          macro X
+                      00098                          movlw X
+                      00099                          call  segundos
+                      00100                          endm
+                      00101 ;//////////////////////////////////////////////////////////////////////////////
+                      00102 ; Macro para LCD Información sobre comandos en www.rodrigocarita.com
+                      00103 ; Para controlar la pantalla LCD 2x16
+                      00104 
+                      00105 iniciarlcd macro             ;Con esto desarrollamos la secuencia de inicio               
+                      00106            call  Inicio_lcd
+                      00107            endm
+                      00108 escribir   macro valcaracter       ;Con este comando enviaremos un caracter a la pantalla
+                      00109            movlw valcaracter
+                      00110            call  ESCRIBIRCARACTER  ;Subrutina en la librería que me permite enviar el caracter
+                      00111            endm
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00112 escribirreg macro registro4                     ;Con este comando enviaremos el valor de un registro a l
+                            a pantalla
+                      00113                    movlw .48
+                      00114                    addwf registro4,1
+                      00115            movf  registro4,0
+                      00116            call  ESCRIBIRCARACTER   ;Subrutina en la librería que me permite enviar el valor
+                      00117            endm
+                      00118 escribirregistro macro regREG3d     ;Subrutina para escribir en el LCD registro de 3 dígitos
+                      00119                    MOVF regREG3d,0
+                      00120                    CALL PARAESCR1B1RREGISTRO
+Warning[205]: Found directive in column 1. (endm)
+                      00121 endm               
+                      00122            
+                      00123 ;Aquí las macros para manipulación del cursor //////////////////////////////////////////
+                      00124 cursor_on macro
+                      00125                 movlw on_display_cursor_blink ;Enciende el cursor y su parpadeo
+                      00126         CALL  ESCRIBIRCOMANDO
+                      00127                 endm
+                      00128 cursor_off macro
+                      00129                 movlw solo_display        ;Apaga el cursor y muestra solamente el display
+                      00130         CALL  ESCRIBIRCOMANDO
+                      00131                 endm
+                      00132 cursor_izquierda macro
+                      00133                 movlw mover_cursor_izquierda ;Mueve el cursor a la derecha
+                      00134         call  ESCRIBIRCOMANDO
+                      00135                 endm
+                      00136 cursor_derecha macro
+                      00137                 movlw mover_cursor_derecha ;Mueve el cursor a la izquierda
+                      00138         call  ESCRIBIRCOMANDO
+                      00139                 endm
+                      00140            
+                      00141 fila_enter     macro    ;Saltará de línea a la segunda fila
+                      00142            movlw salto_enter
+                      00143            call  ESCRIBIRCOMANDO
+Warning[205]: Found directive in column 1. (endm)
+                      00144 endm
+                      00145 fila_home macro
+                      00146                 movlw home_inicio
+                      00147                 call ESCRIBIRCOMANDO
+Warning[205]: Found directive in column 1. (endm)
+                      00148 endm
+                      00149 ;//////////////////////////////////////////////////////
+                      00150 ;//////////////////////////////////////// creado para la escritura en LCD mediante textos predeterminado
+                            s.///////////
+                      00151 mensaje macro  x
+                      00152         if x==.1
+                      00153         call SubirCarActer1
+                      00154         endif
+                      00155         if x==.2
+                      00156         call SubirCarActer2
+                      00157         endif
+                      00158                 if x==.3
+                      00159         call SubirCarActer3
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00160         endif
+                      00161                 if x==.4
+                      00162         call SubirCarActer4
+                      00163         endif
+                      00164                 if x==.5
+                      00165         call SubirCarActer5
+                      00166         endif
+                      00167                 if x==.6
+                      00168         call SubirCarActer6
+                      00169         endif
+                      00170                 if x>.6
+                      00171                 ERROR "No hay mensaje predeterminado para el valor"
+                      00172                 MESSG "Revisa el comando mensjae .x"
+                      00173                 endif
+                      00174         endm
+                      00175 
+                      00176 ;Se pueden agregar más, respetando la estructura de condicionales
+                      00177 
+                      00178 ;/////////////////////////////////////////////////////////////////////////////////////
+                      00179 
+                      00180 
+                      00181 
+                      00182 ;\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                            \
+                      00183 ;\\\\\\\\\\\\\\\\\\\\\Manipulación del cursor solamente para pantallas de 20x4 /////////////////////////
+                            ///
+                      00184 ;\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                      00185 
+                      00186 ir_a_fila macro filaseleccionada
+                      00187 
+                      00188         if filaseleccionada==1
+                      00189                 movlw home_inicio
+                      00190                 call ESCRIBIRCOMANDO
+                      00191         endif
+                      00192         if filaseleccionada==2
+                      00193                 movlw home_inicio
+                      00194                 call ESCRIBIRCOMANDO
+                      00195                 movlw salto_enter
+                      00196         call ESCRIBIRCOMANDO
+                      00197         endif
+                      00198         if filaseleccionada==3
+                      00199                 movlw 0x94
+                      00200                 call ESCRIBIRCOMANDO
+                      00201         endif
+                      00202         if filaseleccionada==4
+                      00203                 movlw 0xD4
+                      00204                 call ESCRIBIRCOMANDO
+                      00205         endif
+                      00206         if filaseleccionada>4
+                      00207                 ERROR "Has sobrepasado la cantidad de filas a usar"
+                      00208                 MESSG "Revisa el comando ir_a_fila que el valor sea"
+                      00209                 MESSG "de 1 a 4 solamente."
+                      00210         endif
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Warning[205]: Found directive in column 1. (endm)
+                      00211 endm
+                      00212 
+                      00213 
+                      00214 ; ///////////////////////Comando adicional /////////////////////////////////////////////////////////////
+                            ///////////
+                      00215 ;/////////////////////////////Para ir a un punto especifico del LCD ////////////////////////////////////
+                            //////////
+                      00216 ;/////////////////////////////////Solo para LCD20x4 ////////////////////////////////////////////////////
+                            //////////
+                      00217 lcdfc macro lcdvalorf,lcdvalorc
+                      00218 
+                      00219         ;/// Para seleccionar la fila
+                      00220         if lcdvalorf==1
+                      00221         MOVLW lcdvalorc
+                      00222         MOVWF ubicacionlcdfcr
+                      00223         DECF ubicacionlcdfcr,1
+                      00224         MOVlW 0X80
+                      00225         ADDWF ubicacionlcdfcr,0
+                      00226         call ESCRIBIRCOMANDO
+                      00227         endif
+                      00228         if lcdvalorf==2
+                      00229         MOVLW lcdvalorc
+                      00230         MOVWF ubicacionlcdfcr
+                      00231         DECF ubicacionlcdfcr,1
+                      00232         MOVlW 0XC0
+                      00233         ADDWF ubicacionlcdfcr,0
+                      00234         call ESCRIBIRCOMANDO
+                      00235         endif
+                      00236         if lcdvalorf==3
+                      00237         MOVLW lcdvalorc
+                      00238         MOVWF ubicacionlcdfcr
+                      00239         DECF ubicacionlcdfcr,1
+                      00240         MOVlW 0X94
+                      00241         ADDWF ubicacionlcdfcr,0
+                      00242         call ESCRIBIRCOMANDO
+                      00243         endif
+                      00244         if lcdvalorf==4
+                      00245         MOVLW lcdvalorc
+                      00246         MOVWF ubicacionlcdfcr
+                      00247         DECF ubicacionlcdfcr,1
+                      00248         MOVlW 0XD4
+                      00249         ADDWF ubicacionlcdfcr,0
+                      00250         call ESCRIBIRCOMANDO
+                      00251         endif
+                      00252         ;Para seleccionar la columna
+                      00253 
+Warning[205]: Found directive in column 1. (endm)
+                      00254 endm
+                      00255 
+                      00256 
+                      00257 
+                      00258 ;\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\               
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00259 
+                      00260 
+                      00261 
+                      00262 ;Desde aquí los comandos para manipulación del display //////////////////////////////////////////
+Warning[207]: Found label after column 1. (borralcd)
+                      00263  borralcd  macro                ;Borra todo lo de la pantalla
+                      00264            movlw limpiar_lcd
+                      00265            call  ESCRIBIRCOMANDO
+                      00266            endm
+Warning[207]: Found label after column 1. (desplazaderecha)
+                      00267  desplazaderecha  macro                 ;Mueve todo lo escrito en la pantalla 1 a la derecha
+                      00268                   movlw  mover_pantalla_derecha
+                      00269                   call   ESCRIBIRCOMANDO             
+                      00270                   endm
+Warning[207]: Found label after column 1. (desplazaizquierda)
+                      00271  desplazaizquierda  macro       ;Mueve todo lo escrito en la pantalla 1 a la izquierda         
+                      00272                                 movlw  mover_pantalla_izquierda
+                      00273                                 call   ESCRIBIRCOMANDO             
+                      00274                                 endm
+Warning[207]: Found label after column 1. (apagarpantalla)
+                      00275  apagarpantalla macro
+                      00276                                 movlw apagar_el_display
+                      00277                                 call ESCRIBIRCOMANDO
+                      00278  endm
+Warning[207]: Found label after column 1. (encenderpantalla)
+                      00279   encenderpantalla macro
+                      00280                                 movlw solo_display
+                      00281                                 call ESCRIBIRCOMANDO
+                      00282  endm
+                      00283  
+                      00284  ;/////////////////////////////////////////////////////////////////////////////////
+                      00285  ;/////////////////////////////////////////////////////////////////////////////////
+                      00286  ;Para enviar 1 pulso de duración programable
+                      00287  ;Requiere de la Librería RETARDOS.ASM
+                      00288  
+Warning[207]: Found label after column 1. (PULSOSUB)
+                      00289  PULSOSUB macro pinp,registrop,duracion
+                      00290                 BSF registrop,pinp
+                      00291                 milisegundo duracion
+                      00292                 BCF registrop,pinp
+                      00293  endm
+                      00294  ;///////////////////// Operaciones matemáticas //////////////////////////////////
+                      00295  ;//////////////////////////////////////////////////////
+                      00296 sumarreg macro registro1,registro2
+                      00297    movf registro1,0
+                      00298    movwf Reg15tr01
+                      00299    movf registro2,0
+                      00300    movwf Reg15tr02
+                      00301    call Separaciondigit05
+                      00302    call ParaSumarReg1str0s
+Warning[205]: Found directive in column 1. (endm)
+                      00303 endm
+                      00304 
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00305 restarreg macro registrox1,registrox2; Hay que asegurarse que el registro 1 sea mayor al registro2.
+                      00306    movf registrox1,0
+                      00307    movwf Reg15tr01
+                      00308    movf registrox2,0
+                      00309    movwf Reg15tr02
+                      00310    call ParaRestarReg1str0s2
+Warning[205]: Found directive in column 1. (endm)
+                      00311 endm
+                      00312  
+                      00313 multiplicarreg macro registrom1,registrom2
+                      00314    movf registrom1,0
+                      00315    movwf Reg15tr01
+                      00316    movf registrom2,0
+                      00317    movwf Reg15tr02
+                      00318    call Separaciondigit05
+                      00319    call ParaMultiplicarReg1str0s
+Warning[205]: Found directive in column 1. (endm)
+                      00320 endm 
+                      00321 
+                      00322 crearreg macro registroc1,registroc2,registroc3
+                      00323    movf registroc1,0
+                      00324    movwf Reg15tr01
+                      00325    movf registroc2,0
+                      00326    movwf Reg15tr02
+                      00327    movf registroc3,0
+                      00328    movwf Reg15tr03
+                      00329    call ParaCrearReg1str0
+Warning[205]: Found directive in column 1. (endm)
+                      00330 endm
+                      00331 
+                      00332 ;///////////////////////////////////////////////////////////////////////////////////////////////////////
+                            /////
+                      00333 ;//////////////////////////////////// Para módulo HC-SR04 //////////////////////////////////////////////
+                            /////
+                      00334 ;///////////////////////////////////////////////////////////////////////////////////////////////////////
+                            /////  
+                      00335 
+                      00336 iniciar_hcsr04 macro
+                      00337         banco 1
+                      00338         MOVLW b'00000111' ; Timer 0 como temporizador y escala 256
+                      00339         MOVWF OPTION_REG  ; Cargamos la configuración en el TMR0
+                      00340         banco 0
+                      00341         BCF TRIGGER
+                      00342         MOVLW .88 ;Cargamos el valor de ajuste de medida 51.2/58 = 0.88
+                      00343     MOVWF Ajust3d1st ;En la variable de ajuste "Ajust3d1st"
+Warning[205]: Found directive in column 1. (endm)
+                      00344 endm
+                      00345 
+                      00346 medir_ultrasonico macro Rresulm3edid4
+                      00347         CALL Med1rdiist4nc1ia  ;Llama a la subrutina de medición
+                      00348         MOVF valaux04,0        ;Extrae el valor de la respuesta en W 
+                      00349         MOVWF Rresulm3edid4    ;Guarda la respuesta en el indicador de registro 
+Warning[205]: Found directive in column 1. (endm)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00350 endm
+                      00351 
+                      00352 ;\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                      00353  
+                      00354  
+                      00355  
+Warning[205]: Found directive in column 1. (__config)
+2007   3F32           00029 __config 0x3f32 ; Este es un comando de fusibles, lo estudiaremos más adelante.
+Warning[205]: Found directive in column 1. (CBLOCK)
+Message[313]: CBLOCK constants will start with a value of 0.
+                      00030 CBLOCK
+Warning[205]: Found directive in column 1. (ENDC)
+                      00031 ENDC
+Warning[205]: Found directive in column 1. (ORG)
+                      00032 ORG 0;
+                      00033 ;//////////// Variables que son los resultados de cálculo ///////////////////
+Warning[206]: Found call to macro in column 1. (banco)
+                      00034 banco 1           ;Vamos al banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+0000   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0001   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0002   307F           00035 MOVLW b'01111111' ;Configuramos los 7 pines del puerto B
+Warning[203]: Found opcode in column 1. (MOVWF)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0003   0086           00036 MOVWF TRISB       ;como entrada. Ahi conectaremos los pulsadores
+Warning[203]: Found opcode in column 1. (BCF)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0004   1007           00037 BCF TRISC,0       ;Declaramos como salida el pin 0 del puerto C (LED)
+Warning[203]: Found opcode in column 1. (BCF)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0005   1107           00038 BCF TRISC,2       ;Declaramos como salida el pin de PWM (CCP1)
+Warning[206]: Found call to macro in column 1. (banco)
+                      00039 banco 0           ;Regresamos al Banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+0006   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0007   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (CLRF)
+0008   0187           00040 CLRF PORTC        ;Limpiamos todo el puerto C
+Warning[203]: Found opcode in column 1. (CLRF)
+0009   0186           00041 CLRF PORTB        ;Limpiamos todo el puerto B
+                      00042 
+Warning[203]: Found opcode in column 1. (MOVLW)
+000A   300C           00043 MOVLW b'00001100' ; Cargamos el valor, para activar el modo PWM
+Warning[203]: Found opcode in column 1. (MOVWF)
+000B   0097           00044 MOVWF CCP1CON     ;  en el registro CCP
+                      00045 
+                      00046 
+Warning[203]: Found opcode in column 1. (movlw)
+000C   3003           00047 movlw b'00000011' ; Configuramos el Preescalador con valor (16) del TMR2
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Warning[203]: Found opcode in column 1. (movwf)
+000D   0092           00048 movwf T2CON       ; En el registro T2CON
+                      00049 
+000E                  00050 PROGRAMA          ; Título de programa para bucle
+Warning[203]: Found opcode in column 1. (BCF)
+000E   1112           00051 BCF T2CON,TMR2ON  ; Apagamos el TMR2 como condición inicial
+Warning[203]: Found opcode in column 1. (BCF)
+000F   1007           00052 BCF PORTC,0       ; Apagamos el LED como condición inicial
+Warning[203]: Found opcode in column 1. (MOVLW)
+0010   3000           00053 MOVLW .0          ; Ingresamos un dutty Cyle al 0% de PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+0011   0095           00054 MOVWF CCPR1L      ; En el registro CCPR1L
+                      00055 
+Warning[203]: Found opcode in column 1. (BTFSC)
+0012   1806           00056 BTFSC PORTB,0   ;Comprobamos si el PIN 0 del puerto B (Do) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+0013   2???           00057 GOTO RUTDO      ;Caso sea verdadero vamos la subrutina RUTDO
+Warning[203]: Found opcode in column 1. (BTFSC)
+0014   1886           00058 BTFSC PORTB,1   ;Comprobamos si el PIN 1 del puerto B (Re) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+0015   2???           00059 GOTO RUTRE      ;Caso sea verdadero vamos la subrutina RUTRE
+Warning[203]: Found opcode in column 1. (BTFSC)
+0016   1906           00060 BTFSC PORTB,2   ;Comprobamos si el PIN 2 del puerto B (Mi) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+0017   2???           00061 GOTO RUTMI      ;Caso sea verdadero vamos la subrutina RUTMI
+Warning[203]: Found opcode in column 1. (BTFSC)
+0018   1986           00062 BTFSC PORTB,3   ;Comprobamos si el PIN 3 del puerto B (Fa) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+0019   2???           00063 GOTO RUTFA      ;Caso sea verdadero vamos la subrutina RUTFA
+Warning[203]: Found opcode in column 1. (BTFSC)
+001A   1A06           00064 BTFSC PORTB,4   ;Comprobamos si el PIN 4 del puerto B (Sol) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+001B   2???           00065 GOTO RUTSOL     ;Caso sea verdadero vamos la subrutina RUTSOL
+Warning[203]: Found opcode in column 1. (BTFSC)
+001C   1A86           00066 BTFSC PORTB,5   ;Comprobamos si el PIN 5 del puerto B (La) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+001D   2???           00067 GOTO RUTLA      ;Caso sea verdadero vamos la subrutina RUTLA
+Warning[203]: Found opcode in column 1. (BTFSC)
+001E   1B06           00068 BTFSC PORTB,6   ;Comprobamos si el PIN 6 del puerto B (Si) ha sido pulsado
+Warning[203]: Found opcode in column 1. (GOTO)
+001F   2???           00069 GOTO RUTSI      ;Caso sea verdadero vamos la subrutina RUTSI
+Warning[203]: Found opcode in column 1. (GOTO)
+0020   2???           00070 GOTO PROGRAMA   ;Repetimos el programa
+                      00071 
+0021                  00072 RUTDO             ;Subrutina para la tecla Do
+Warning[203]: Found opcode in column 1. (BSF)
+0021   1407           00073 BSF PORTC,0       ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+0022   1512           00074 BSF T2CON,TMR2ON  ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00075 banco 1           ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+0023   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0024   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0025   30EE           00076 MOVLW .238        ;Cargamos el valor de cálculo de la nota Do
+Warning[203]: Found opcode in column 1. (movwf)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0026   0092           00077 movwf PR2         ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00078 banco 0           ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+0027   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0028   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0029   3077           00079 MOVLW .119        ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+002A   0095           00080 MOVWF CCPR1L      ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+002B   1806           00081 BTFSC PORTB,0     ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+002C   2???           00082 GOTO $-1          ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+002D   2???           00083 GOTO PROGRAMA     ;Caso verdadero: Repetimos el programa
+                      00084 
+002E                  00085 RUTRE               ;Subrutina para la tecla Re
+Warning[203]: Found opcode in column 1. (BSF)
+002E   1407           00086 BSF PORTC,0         ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+002F   1512           00087 BSF T2CON,TMR2ON    ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00088 banco 1             ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+0030   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0031   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 14
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0032   30D3           00089 MOVLW .211          ;Cargamos el valor de cálculo de la nota Re
+Warning[203]: Found opcode in column 1. (MOVWF)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0033   0092           00090 MOVWF PR2           ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00091 banco 0             ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+0034   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0035   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0036   3069           00092 MOVLW .105          ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+0037   0095           00093 MOVWF CCPR1L        ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 15
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0038   1886           00094 BTFSC PORTB,1       ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+0039   2???           00095 GOTO $-1            ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+003A   2???           00096 GOTO PROGRAMA       ;Caso verdadero: Repetimos el programa
+                      00097 
+003B                  00098 RUTMI               ;Subrutina para la tecla Mi
+Warning[203]: Found opcode in column 1. (BSF)
+003B   1407           00099 BSF PORTC,0         ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+003C   1512           00100 BSF T2CON,TMR2ON    ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00101 banco 1             ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+003D   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+003E   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+003F   30BD           00102 MOVLW .189          ;Cargamos el valor de cálculo de la nota Mi
+Warning[203]: Found opcode in column 1. (MOVWF)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0040   0092           00103 MOVWF PR2           ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00104 banco 0             ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 16
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+0041   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0042   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0043   305E           00105 MOVLW .94           ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+0044   0095           00106 MOVWF CCPR1L        ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+0045   1906           00107 BTFSC PORTB,2       ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+0046   2???           00108 GOTO $-1            ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+0047   2???           00109 GOTO PROGRAMA       ;Caso verdadero: Repetimos el programa
+                      00110 
+0048                  00111 RUTFA               ;Subrutina para la tecla Fa
+Warning[203]: Found opcode in column 1. (BSF)
+0048   1407           00112 BSF PORTC,0         ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+0049   1512           00113 BSF T2CON,TMR2ON    ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00114 banco 1             ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 17
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+004A   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+004B   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+004C   30B1           00115 MOVLW .177          ;Cargamos el valor de cálculo de la nota Fa
+Warning[203]: Found opcode in column 1. (MOVWF)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+004D   0092           00116 MOVWF PR2           ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00117 banco 0             ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+004E   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+004F   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 18
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0050   3063           00118 MOVLW .99           ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+0051   0095           00119 MOVWF CCPR1L        ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+0052   1986           00120 BTFSC PORTB,3       ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+0053   2???           00121 GOTO $-1            ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+0054   2???           00122 GOTO PROGRAMA       ;Caso verdadero: Repetimos el programa
+                      00123 
+0055                  00124 RUTSOL              ;Subrutina para la tecla Sol
+Warning[203]: Found opcode in column 1. (BSF)
+0055   1407           00125 BSF PORTC,0         ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+0056   1512           00126 BSF T2CON,TMR2ON    ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00127 banco 1             ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+0057   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0058   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 19
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0059   309E           00128 MOVLW .158          ;Cargamos el valor de cálculo de la nota Sol
+Warning[203]: Found opcode in column 1. (movwf)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+005A   0092           00129 movwf PR2           ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00130 banco 0             ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+005B   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+005C   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+005D   304F           00131 MOVLW .79           ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+005E   0095           00132 MOVWF CCPR1L        ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+005F   1A06           00133 BTFSC PORTB,4       ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+0060   2???           00134 GOTO $-1            ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 20
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0061   2???           00135 GOTO PROGRAMA       ;Caso verdadero: Repetimos el programa
+                      00136 
+0062                  00137 RUTLA               ;Subrutina para la tecla La
+Warning[203]: Found opcode in column 1. (BSF)
+0062   1407           00138 BSF PORTC,0         ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+0063   1512           00139 BSF T2CON,TMR2ON    ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00140 banco 1             ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+Warning[203]: Found opcode in column 1. (BSF)
+0064   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0065   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0066   308D           00141 MOVLW .141          ;Cargamos el valor de cálculo de la nota La
+Warning[203]: Found opcode in column 1. (movwf)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0067   0092           00142 movwf PR2           ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00143 banco 0             ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+0068   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 21
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0069   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+006A   3046           00144 MOVLW .70           ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+006B   0095           00145 MOVWF CCPR1L        ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+006C   1A86           00146 BTFSC PORTB,5       ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+006D   2???           00147 GOTO $-1            ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+006E   2???           00148 GOTO PROGRAMA       ;Caso verdadero: Repetimos el programa
+                      00149 
+006F                  00150 RUTSI               ;Subrutina para la tecla Si
+Warning[203]: Found opcode in column 1. (BSF)
+006F   1407           00151 BSF PORTC,0         ;Encendemos el LED
+Warning[203]: Found opcode in column 1. (BSF)
+0070   1512           00152 BSF T2CON,TMR2ON    ;Encendemos el TMR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00153 banco 1             ;Vamos la banco 1
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==0
+                          M BCF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==1
+                          M ;banco 1
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 22
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Warning[203]: Found opcode in column 1. (BSF)
+0071   1683               M BSF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0072   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 1==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0073   307E           00154 MOVLW .126          ;Cargamos el valor de cálculo de la nota Si
+Warning[203]: Found opcode in column 1. (movwf)
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0074   0092           00155 movwf PR2           ;en el registro PR2
+Warning[206]: Found call to macro in column 1. (banco)
+                      00156 banco 0             ;Vamos l banco 0
+                          M ;banco 0
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==0
+Warning[203]: Found opcode in column 1. (BCF)
+0075   1283               M BCF STATUS, RP0
+Warning[203]: Found opcode in column 1. (BCF)
+0076   1303               M BCF STATUS, RP1
+Warning[205]: Found directive in column 1. (endif)
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==1
+                          M ;banco 1
+                          M BSF STATUS, RP0
+                          M BCF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+                          M if 0==2
+                          M ;banco 2
+                          M BCF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[205]: Found directive in column 1. (if)
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 23
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                          M if 0==3
+                          M ;banco 3
+                          M BSF STATUS, RP0
+                          M BSF STATUS, RP1
+                          M endif
+                          M 
+Warning[203]: Found opcode in column 1. (MOVLW)
+0077   303F           00157 MOVLW .63           ;Cargamos el valor del Dutty cycle 50% del PR2
+Warning[203]: Found opcode in column 1. (MOVWF)
+0078   0095           00158 MOVWF CCPR1L        ;en el registro CCPR1L
+Warning[203]: Found opcode in column 1. (BTFSC)
+0079   1B06           00159 BTFSC PORTB,6       ;Comprobamos si se ha dejado de pulsar la tecla
+Warning[203]: Found opcode in column 1. (GOTO)
+007A   2???           00160 GOTO $-1            ;Caso falso: Seguimos comprobando
+Warning[203]: Found opcode in column 1. (GOTO)
+007B   2???           00161 GOTO PROGRAMA       ;Caso verdadero: Repetimos el programa 
+                      00162 
+Warning[205]: Found directive in column 1. (END)
+3F32                  00163 END
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 24
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ACKDT                             00000005
+ACKEN                             00000004
+ACKSTAT                           00000006
+ADCON0                            0000001F
+ADCON1                            0000009F
+ADCS0                             00000006
+ADCS1                             00000007
+ADCS2                             00000006
+ADDEN                             00000003
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRESH                            0000001E
+ADRESL                            0000009E
+BCLIE                             00000003
+BCLIF                             00000003
+BF                                00000000
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCP2CON                           0000001D
+CCP2IE                            00000000
+CCP2IF                            00000000
+CCP2M0                            00000000
+CCP2M1                            00000001
+CCP2M2                            00000002
+CCP2M3                            00000003
+CCP2X                             00000005
+CCP2Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CCPR2                             0000001B
+CCPR2H                            0000001C
+CCPR2L                            0000001B
+CHS0                              00000003
+CHS1                              00000004
+CHS2                              00000005
+CIS                               00000003
+CKE                               00000006
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 25
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+CKP                               00000004
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000009C
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+CVR0                              00000000
+CVR1                              00000001
+CVR2                              00000002
+CVR3                              00000003
+CVRCON                            0000009D
+CVREN                             00000007
+CVROE                             00000006
+CVRR                              00000005
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+D_A                               00000005
+D_NOT_A                           00000005
+EEADR                             0000010D
+EEADRH                            0000010F
+EECON1                            0000018C
+EECON2                            0000018D
+EEDATA                            0000010C
+EEDATH                            0000010E
+EEIE                              00000004
+EEIF                              00000004
+EEPGD                             00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GCEN                              00000007
+GIE                               00000007
+GO                                00000002
+GO_DONE                           00000002
+GO_NOT_DONE                       00000002
+I2C_DATA                          00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+IBF                               00000007
+IBOV                              00000005
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+NOT_A                             00000005
+NOT_ADDRESS                       00000005
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 26
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+NOT_BO                            00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000002
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RC8                           00000006
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+NOT_TX8                           00000006
+NOT_W                             00000002
+NOT_WRITE                         00000002
+OBF                               00000006
+OERR                              00000001
+OPTION_REG                        00000081
+P                                 00000004
+PCFG0                             00000000
+PCFG1                             00000001
+PCFG2                             00000002
+PCFG3                             00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PEN                               00000002
+PIE1                              0000008C
+PIE2                              0000008D
+PIR1                              0000000C
+PIR2                              0000000D
+PORTA                             00000005
+PORTB                             00000006
+PORTC                             00000007
+PORTD                             00000008
+PORTE                             00000009
+PR2                               00000092
+PROGRAMA                          0000000E
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PSPIE                             00000007
+PSPIF                             00000007
+PSPMODE                           00000004
+PULSOSUB                          
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RB0                               00000000
+RB1                               00000001
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 27
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RC8_9                             00000006
+RC9                               00000006
+RCD8                              00000000
+RCEN                              00000003
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RD0                               00000000
+RD1                               00000001
+RD2                               00000002
+RD3                               00000003
+RD4                               00000004
+RD5                               00000005
+RD6                               00000006
+RD7                               00000007
+RE0                               00000000
+RE1                               00000001
+RE2                               00000002
+READ_WRITE                        00000002
+RP0                               00000005
+RP1                               00000006
+RSEN                              00000001
+RUTDO                             00000021
+RUTFA                             00000048
+RUTLA                             00000062
+RUTMI                             0000003B
+RUTRE                             0000002E
+RUTSI                             0000006F
+RUTSOL                            00000055
+RX9                               00000006
+RX9D                              00000000
+R_NOT_W                           00000002
+R_W                               00000002
+S                                 00000003
+SEN                               00000000
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 28
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+SMP                               00000007
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+SSPADD                            00000093
+SSPBUF                            00000013
+SSPCON                            00000014
+SSPCON2                           00000091
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000094
+STATUS                            00000003
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T1SYNC                            00000002
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 29
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+TRISC7                            00000007
+TRISD                             00000088
+TRISD0                            00000000
+TRISD1                            00000001
+TRISD2                            00000002
+TRISD3                            00000003
+TRISD4                            00000004
+TRISD5                            00000005
+TRISD6                            00000006
+TRISD7                            00000007
+TRISE                             00000089
+TRISE0                            00000000
+TRISE1                            00000001
+TRISE2                            00000002
+TRMT                              00000001
+TX8_9                             00000006
+TX9                               00000006
+TX9D                              00000000
+TXD8                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+UA                                00000001
+W                                 00000000
+WCOL                              00000007
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_.org_0_002C                      0000002C
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 30
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_.org_0_0039                      00000039
+_.org_0_0046                      00000046
+_.org_0_0053                      00000053
+_.org_0_0060                      00000060
+_.org_0_006D                      0000006D
+_.org_0_007A                      0000007A
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_ALL                           00001FFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DEBUG_OFF                        00003FFF
+_DEBUG_ON                         000037FF
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_WRT_1FOURTH                      00003BFF
+_WRT_256                          00003DFF
+_WRT_HALF                         000039FF
+_WRT_OFF                          00003FFF
+_XT_OSC                           00003FFD
+__16F877A                         00000001
+apagar                            
+apagarpantalla                    
+banco                             
+borralcd                          
+convertir_a_bcd                   
+crearreg                          
+csi                               
+csir                              
+cursor_derecha                    
+MPASM 5.56                     S17-PIANO.ASM   11-30-2018  10:26:39         PAGE 31
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+cursor_izquierda                  
+cursor_off                        
+cursor_on                         
+desplazaderecha                   
+desplazaizquierda                 
+encender                          
+encenderpantalla                  
+enviaradisplay                    
+enviarcdisplay                    
+escribir                          
+escribirreg                       
+escribirregistro                  
+fila_enter                        
+fila_home                         
+iniciar_hcsr04                    
+iniciarlcd                        
+ir_a_fila                         
+lcdfc                             
+medir_ultrasonico                 
+mensaje                           
+milisegundo                       
+multiplicarreg                    
+on_lib_retardos_ms                
+puertoa                           00000005
+puertob                           00000006
+puertoc                           00000007
+puertod                           00000008
+puertoe                           00000009
+restarreg                         
+retardo_ms                        
+segundo                           
+sumarreg                          
+
+Errors   :     0
+Warnings :   253 reported,     0 suppressed
+Messages :    11 reported,     0 suppressed
+
+
